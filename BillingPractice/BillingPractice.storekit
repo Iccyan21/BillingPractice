@@ -103,7 +103,69 @@
     ]
   },
   "subscriptionGroups" : [
+    {
+      "id" : "018CB54D",
+      "localizations" : [
 
+      ],
+      "name" : "ProfessionalPlan",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "500",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "96AF0A74",
+          "introductoryOffer" : {
+            "displayPrice" : "0.99",
+            "internalID" : "CEE420C8",
+            "paymentMode" : "none"
+          },
+          "localizations" : [
+            {
+              "description" : "",
+              "displayName" : "",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "Professional",
+          "recurringSubscriptionPeriod" : "P1W",
+          "referenceName" : "ProfessionalPlan",
+          "subscriptionGroupID" : "018CB54D",
+          "type" : "RecurringSubscription"
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "1000",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "4CB39D42",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "",
+              "displayName" : "",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "Premium",
+          "recurringSubscriptionPeriod" : "P1W",
+          "referenceName" : "PremiumPlan",
+          "subscriptionGroupID" : "018CB54D",
+          "type" : "RecurringSubscription"
+        }
+      ]
+    }
   ],
   "version" : {
     "major" : 3,
