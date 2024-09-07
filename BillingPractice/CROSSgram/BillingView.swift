@@ -19,12 +19,12 @@ class UserSession: ObservableObject {
     }
 }
 
-
-
 struct BillingView: View {
     @StateObject private var purchaseManager = PurchaseManager()
     @EnvironmentObject var userSession: UserSession
     @State private var selectedPlan: String = "無料" // デフォルト値を設定
+    @State private var currentPlan: String = "無料" // 現在のプランを保存
+    @State private var isLoadingPlan = true // ローディング中の状態を示す
     
     // 各プランの特徴を定義
     let freeFeatures = [
@@ -71,34 +71,43 @@ struct BillingView: View {
                 .fontWeight(.bold)
                 .padding()
             
-            ScrollView {
-                VStack(spacing: 20) {
-                    DetailedPlanView(planName: "無料", price: "無料", features: freeFeatures, isSelected: selectedPlan == "無料", onSelect: {
-                        selectedPlan = "無料"
-                    })
-                    DetailedPlanView(planName: "プロ", price: "¥500/週", features: proFeatures, isSelected: selectedPlan == "プロ", onSelect: {
-                        selectedPlan = "プロ"
-                    })
-                    DetailedPlanView(planName: "プレミアム", price: "¥1,000/週", features: premiumFeatures, isSelected: selectedPlan == "プレミアム", isRecommended: true, onSelect: {
-                        selectedPlan = "プレミアム"
-                    })
-                }
-                .padding()
-            }
-            
-            Button(action: {
-                purchaseSelectedPlan()
-            }) {
-                Text("プランに入る！")
-                    .font(.headline)
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
+            if isLoadingPlan {
+                ProgressView("Loading current plan...")
                     .padding()
-                    .background(Color.purple)
-                    .cornerRadius(10)
+            } else {
+                ScrollView {
+                    VStack(spacing: 20) {
+                        DetailedPlanView(planName: "無料", price: "無料", features: freeFeatures, isSelected: selectedPlan == "無料", currentPlan: currentPlan, onSelect: {
+                            selectedPlan = "無料"
+                        })
+                        DetailedPlanView(planName: "プロ", price: "¥500/週", features: proFeatures, isSelected: selectedPlan == "プロ", currentPlan: currentPlan, onSelect: {
+                            selectedPlan = "プロ"
+                        })
+                        DetailedPlanView(planName: "プレミアム", price: "¥1,000/週", features: premiumFeatures, isSelected: selectedPlan == "プレミアム", isRecommended: true, currentPlan: currentPlan, onSelect: {
+                            selectedPlan = "プレミアム"
+                        })
+                    }
+                    .padding()
+                }
+                
+                Button(action: {
+                    purchaseSelectedPlan()
+                }) {
+                    Text("プランに入る！")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(selectedPlan == currentPlan ? Color.gray : Color.purple) // 無効化時はグレー、通常時はパープル
+                        .cornerRadius(10)
+                }
+                .padding(.horizontal)
+                .padding(.bottom, 30)
+                .disabled(selectedPlan == currentPlan) // 選択されたプランが既存のプランと同じならボタンを無効化
             }
-            .padding(.horizontal)
-            .padding(.bottom, 30)
+        }
+        .onAppear {
+            loadCurrentPlan()
         }
         .overlay(
             Group {
@@ -113,8 +122,43 @@ struct BillingView: View {
                 }
             }
         )
-
+        .onReceive(purchaseManager.$isProcessingPayment) { isProcessing in
+            // 購入処理が完了したらボタン状態を更新
+            if !isProcessing {
+                currentPlan = selectedPlan // 購入後に現在のプランを更新
+            }
+        }
     }
+    
+    func loadCurrentPlan() {
+        guard let userId = userSession.userId else {
+            print("User ID is not available.")
+            return
+        }
+        
+        let db = Firestore.firestore()
+        db.collection("users").document(userId).getDocument { (document, error) in
+            if let document = document, document.exists {
+                if let plan = document.data()?["plan"] as? String {
+                    selectedPlan = plan
+                    currentPlan = plan  // 現在のプランを保存
+                    print("Current plan: \(plan)")
+                } else {
+                    // ドキュメントが存在しても "plan" フィールドがない場合
+                    selectedPlan = "無料"
+                    currentPlan = "無料"
+                    print("No plan found, defaulting to Free.")
+                }
+            } else {
+                // ドキュメントが存在しない場合やエラーの場合
+                print("Error fetching document: \(error?.localizedDescription ?? "Unknown error")")
+                selectedPlan = "無料"
+                currentPlan = "無料"
+            }
+            isLoadingPlan = false
+        }
+    }
+    
     
     func purchaseSelectedPlan() {
         guard let userId = userSession.userId else {
@@ -122,6 +166,7 @@ struct BillingView: View {
             return
         }
         print("User ID is available: \(userId)")
+        
         let productId = productId(for: selectedPlan)
         print("Selected plan: \(selectedPlan), Product ID: \(productId)")
         purchaseManager.purchaseProduct(productId: productId, planName: selectedPlan, userId: userId)
@@ -131,12 +176,13 @@ struct BillingView: View {
         let id = switch plan {
         case "プロ": "Professional"
         case "プレミアム": "Premium"
-        default: "FreePlanId"
+        default: "Free"
         }
         print("Product ID for \(plan) is \(id)")
         return id
     }
 }
+
 
 struct DetailedPlanView: View {
     var planName: String
@@ -144,6 +190,7 @@ struct DetailedPlanView: View {
     var features: [String]
     var isSelected: Bool
     var isRecommended: Bool = false
+    var currentPlan: String // 現在のプラン
     var onSelect: () -> Void
     
     var body: some View {
@@ -191,8 +238,9 @@ struct DetailedPlanView: View {
     }
 }
 
-// StoreKitのサブスクリプション管理用シングルトンクラス
 
+
+// PurchaseManager: サブスクリプションの管理クラス
 @MainActor
 final class PurchaseManager: ObservableObject {
     @Published var isProcessingPayment = false
@@ -222,7 +270,15 @@ final class PurchaseManager: ObservableObject {
         isProcessingPayment = true
         Task {
             do {
-                let product = try await Product.products(for: [productId]).first!
+                // Product.products(for:) で得られるのはProductの配列
+                // first! で最初のProductを取得し、強制アンラップします
+                guard let product = try await Product.products(for: [productId]).first else {
+                    print("No product found for ID: \(productId)")
+                    isProcessingPayment = false
+                    return
+                }
+                
+                // 購入処理を実行
                 let result = try await product.purchase()
                 
                 switch result {
@@ -247,6 +303,7 @@ final class PurchaseManager: ObservableObject {
             isProcessingPayment = false
         }
     }
+    
     
     private func updateSubscriptionPlan(userId: String, planName: String) {
         let db = Firestore.firestore()

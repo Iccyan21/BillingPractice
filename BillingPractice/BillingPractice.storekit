@@ -163,6 +163,31 @@
           "referenceName" : "PremiumPlan",
           "subscriptionGroupID" : "018CB54D",
           "type" : "RecurringSubscription"
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "0",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "825FC939",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "",
+              "displayName" : "",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "Free",
+          "recurringSubscriptionPeriod" : "P1W",
+          "referenceName" : "FreePlan",
+          "subscriptionGroupID" : "018CB54D",
+          "type" : "RecurringSubscription"
         }
       ]
     }

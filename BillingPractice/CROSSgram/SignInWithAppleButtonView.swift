@@ -54,14 +54,24 @@ struct SignInWithAppleButtonView: View {
     
     func saveUserID(userIdentifier: String) {
         let db = Firestore.firestore()
-        db.collection("users").document(userIdentifier).setData([
-            "userid": userIdentifier,
-            "plan": "無料"
-        ], merge: true) { err in
-            if let err = err {
-                print("Error writing document: \(err)")
+        
+        // ユーザーがすでに存在するか確認
+        db.collection("users").document(userIdentifier).getDocument { (document, error) in
+            if let document = document, document.exists {
+                // 既にユーザーが存在している場合、何もしないか、他の処理を行う
+                print("User already exists, no need to update the plan.")
             } else {
-                print("Document successfully written with user ID and default plan!")
+                // ユーザーが存在しない場合のみ、新しいデータを書き込む
+                db.collection("users").document(userIdentifier).setData([
+                    "userid": userIdentifier,
+                    "plan": "無料"
+                ], merge: true) { err in
+                    if let err = err {
+                        print("Error writing document: \(err)")
+                    } else {
+                        print("Document successfully written with user ID and default plan!")
+                    }
+                }
             }
         }
     }
